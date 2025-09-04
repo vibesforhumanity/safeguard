@@ -65,7 +65,11 @@ class GemmaModel {
 The Gemma model is already downloaded to:
 `/Users/ezakas/SafeGuard-iOS/SafeGuardParent/SafeGuardParent/Models/gemma-3n-e2b.gguf`
 
-Add to Xcode:
+**Current Setup**: Model path uses fallback logic:
+1. **Bundle Resource**: `Bundle.main.path(forResource: "gemma-3n-e2b", ofType: "gguf")` (production)
+2. **Development Path**: Local file system path (current development)
+
+**For Production Deployment**:
 1. Drag model file into Xcode project
 2. Ensure "Add to target" is checked for SafeGuardParent
 3. Set bundle resource type in Build Phases

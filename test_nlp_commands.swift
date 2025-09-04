@@ -29,7 +29,9 @@ let testCommands = [
     "Remove all restrictions for the weekend",
     "Educational apps only for 30 minutes",
     "Bedtime mode starting now",
-    "Block social media for 1 hour"
+    "Block social media for 1 hour",
+    "Enable all apps",
+    "Unlock the device"
 ]
 
 print("🧪 Testing SafeGuard Natural Language Processing")
@@ -60,6 +62,8 @@ func simulateGemmaProcessing(_ input: String) -> String {
     } else if lowercased.contains("warning") && lowercased.contains("dinner") {
         return "warning minutes:10 msg:Dinner is ready in 10 minutes"
     } else if lowercased.contains("remove") && lowercased.contains("restrictions") {
+        return "allow"
+    } else if lowercased.contains("enable") || lowercased.contains("unlock") {
         return "allow"
     } else if lowercased.contains("educational") {
         return "educational duration:30"
