@@ -80,3 +80,7 @@ project.xcworkspace/xcuserdata/
 # Large model files
 *.gguf
 Models/
+
+# Firebase sensitive configuration
+GoogleService-Info.plist
+**/GoogleService-Info.plist
