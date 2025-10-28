@@ -67,3 +67,16 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# Xcode user data
+xcuserdata/
+*.xcuserstate
+project.xcworkspace/xcuserdata/
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Large model files
+*.gguf
+Models/
