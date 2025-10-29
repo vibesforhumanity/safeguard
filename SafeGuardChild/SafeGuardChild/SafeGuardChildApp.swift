@@ -456,7 +456,19 @@ class ChildDeviceManager: ObservableObject {
         // Show countdown overlay in top corner - ensure on main thread
         Task { @MainActor in
             childLogger.debug("Calling countdownOverlayManager.showCountdown")
-            countdownOverlayManager.showCountdown(minutes: minutes, customMessage: customMessage)
+            countdownOverlayManager.showCountdown(minutes: minutes, customMessage: customMessage) {
+                // When countdown expires, apply restrictions
+                childLogger.info("Countdown expired - applying emergency shutdown")
+                self.applyEmergencyShutdown()
+
+                // Hide the countdown overlay and show full blocking screen
+                self.countdownOverlayManager.hideCountdown()
+
+                // Notify parent
+                Task {
+                    await self.notifyParentOfRestrictionStatus("Warning timer expired - restrictions applied")
+                }
+            }
             childLogger.debug("countdownOverlayManager.showCountdown completed")
         }
 

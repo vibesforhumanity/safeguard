@@ -10,8 +10,10 @@ class CountdownOverlayManager: ObservableObject {
     private var overlayWindow: UIWindow?
     private var countdownVC: CountdownViewController?
     private var isActive = false
+    private var onExpiration: (() -> Void)?
 
-    func showCountdown(minutes: Int, customMessage: String? = nil) {
+    func showCountdown(minutes: Int, customMessage: String? = nil, onExpiration: (() -> Void)? = nil) {
+        self.onExpiration = onExpiration
         logger.info("showCountdown called with \(minutes) minutes, isActive: \(self.isActive)")
 
         if isActive {
@@ -55,7 +57,7 @@ class CountdownOverlayManager: ObservableObject {
         overlayWindow?.backgroundColor = .clear
 
         // Create the countdown view controller
-        countdownVC = CountdownViewController(minutes: minutes, message: customMessage)
+        countdownVC = CountdownViewController(minutes: minutes, message: customMessage, onExpiration: onExpiration)
         overlayWindow?.rootViewController = countdownVC
 
         overlayWindow?.isHidden = false
@@ -108,10 +110,13 @@ class CountdownViewController: UIViewController {
     private var timerLabel: UILabel!
     private var messageLabel: UILabel!
     private let customMessage: String?
+    private let onExpiration: (() -> Void)?
+    private var hasExpired = false
 
-    init(minutes: Int, message: String?) {
+    init(minutes: Int, message: String?, onExpiration: (() -> Void)?) {
         self.endTime = Date().addingTimeInterval(TimeInterval(minutes * 60))
         self.customMessage = message
+        self.onExpiration = onExpiration
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -212,6 +217,13 @@ class CountdownViewController: UIViewController {
             // Flash red to indicate time's up
             UIView.animate(withDuration: 0.5, delay: 0, options: [.repeat, .autoreverse]) {
                 self.containerView.backgroundColor = UIColor.systemRed.withAlphaComponent(0.95)
+            }
+
+            // Trigger expiration callback once
+            if !hasExpired {
+                hasExpired = true
+                logger.info("Countdown expired - triggering onExpiration callback")
+                onExpiration?()
             }
 
             return
