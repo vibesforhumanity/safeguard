@@ -10,7 +10,6 @@ class CountdownOverlayManager: ObservableObject {
     private var overlayWindow: UIWindow?
     private var countdownVC: CountdownViewController?
     private var isActive = false
-    private var timer: Timer?
 
     func showCountdown(minutes: Int, customMessage: String? = nil) {
         logger.info("showCountdown called with \(minutes) minutes, isActive: \(self.isActive)")
@@ -32,7 +31,7 @@ class CountdownOverlayManager: ObservableObject {
             return
         }
 
-        // Create a new window for the countdown
+        // Create a new window for the countdown - use same approach as blocking overlay
         logger.debug("Looking for window scene, connected scenes: \(UIApplication.shared.connectedScenes.count)")
 
         // Try active scene first, fall back to any scene
@@ -52,7 +51,7 @@ class CountdownOverlayManager: ObservableObject {
 
         overlayWindow = UIWindow(windowScene: windowScene)
         overlayWindow?.frame = windowScene.coordinateSpace.bounds
-        overlayWindow?.windowLevel = UIWindow.Level.alert + 1
+        overlayWindow?.windowLevel = UIWindow.Level.alert + 1000  // Same high level as blocking overlay
         overlayWindow?.backgroundColor = .clear
 
         // Create the countdown view controller
@@ -64,16 +63,11 @@ class CountdownOverlayManager: ObservableObject {
 
         logger.info("Countdown window created - frame: \(String(describing: self.overlayWindow?.frame)), level: \(self.overlayWindow?.windowLevel.rawValue ?? 0)")
 
-        // Let the app regain key window status
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            if let appWindow = windowScene.windows.first(where: { $0 != self.overlayWindow && $0.isKeyWindow == false }) {
-                appWindow.makeKey()
-                logger.debug("App window restored as key window")
-            }
-        }
-
         isActive = true
         logger.info("Countdown overlay setup complete")
+
+        // Maintain overlay visibility like blocking overlay does
+        scheduleOverlayMaintenance()
     }
 
     func hideCountdown() {
@@ -85,6 +79,24 @@ class CountdownOverlayManager: ObservableObject {
         overlayWindow = nil
         countdownVC = nil
         isActive = false
+    }
+
+    private func scheduleOverlayMaintenance() {
+        // Reshow overlay every 2 seconds to ensure it stays visible
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            self.maintainOverlay()
+        }
+    }
+
+    private func maintainOverlay() {
+        guard isActive else { return }
+
+        // Ensure overlay stays visible
+        overlayWindow?.makeKeyAndVisible()
+        overlayWindow?.windowLevel = UIWindow.Level.alert + 1000
+
+        logger.debug("Maintaining countdown overlay")
+        scheduleOverlayMaintenance()
     }
 }
 
