@@ -201,12 +201,26 @@ class FirebaseManager: ObservableObject {
     }
     
     private func setupStatusListener() {
+        // Listen for new status entries
         database.child("status").observe(.childAdded) { [weak self] snapshot in
             if let statusData = snapshot.value as? [String: Any],
                let deviceID = statusData["deviceID"] as? String,
                let message = statusData["message"] as? String {
-                print("🔔 Child device status (\(deviceID)): \(message)")
-                
+                print("🔔 Child device status added (\(deviceID)): \(message)")
+
+                Task { @MainActor in
+                    self?.restrictionStatus = message
+                }
+            }
+        }
+
+        // Listen for status updates (critical for toggle sync)
+        database.child("status").observe(.childChanged) { [weak self] snapshot in
+            if let statusData = snapshot.value as? [String: Any],
+               let deviceID = statusData["deviceID"] as? String,
+               let message = statusData["message"] as? String {
+                print("🔔 Child device status changed (\(deviceID)): \(message)")
+
                 Task { @MainActor in
                     self?.restrictionStatus = message
                 }
