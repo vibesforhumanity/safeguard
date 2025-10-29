@@ -9,9 +9,16 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var parentControls: ParentControlManager
-    @State private var restrictionsEnabled = false
     @State private var showingAlert = false
     @State private var alertMessage = ""
+
+    // Computed property that syncs with actual restriction status
+    private var restrictionsEnabled: Bool {
+        get {
+            parentControls.firebase.restrictionStatus.contains("blocked") ||
+            parentControls.firebase.restrictionStatus.contains("restricted")
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -90,13 +97,15 @@ struct ContentView: View {
                                 .foregroundColor(.secondary)
                         }
                         Spacer()
-                        Toggle("", isOn: $restrictionsEnabled)
-                            .labelsHidden()
-                            .onChange(of: restrictionsEnabled) { _, newValue in
+                        Toggle("", isOn: Binding(
+                            get: { restrictionsEnabled },
+                            set: { newValue in
                                 Task {
                                     await handleRestrictionsToggle(enabled: newValue)
                                 }
                             }
+                        ))
+                        .labelsHidden()
                     }
                     .padding()
                     .background(Color(.systemGray6))
@@ -145,14 +154,12 @@ struct ContentView: View {
         if enabled {
             let success = await parentControls.sendEmergencyShutdownCommand()
             if !success {
-                restrictionsEnabled = false
                 alertMessage = "Failed to enable restrictions. Please try again."
                 showingAlert = true
             }
         } else {
             let success = await parentControls.removeAllRestrictionsCommand()
             if !success {
-                restrictionsEnabled = true
                 alertMessage = "Failed to disable restrictions. Please try again."
                 showingAlert = true
             }
