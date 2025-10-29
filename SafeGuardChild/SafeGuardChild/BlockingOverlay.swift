@@ -53,7 +53,7 @@ class CountdownOverlayManager: ObservableObject {
 
         overlayWindow = UIWindow(windowScene: windowScene)
         overlayWindow?.frame = windowScene.coordinateSpace.bounds
-        overlayWindow?.windowLevel = UIWindow.Level.alert + 1000  // Same high level as blocking overlay
+        overlayWindow?.windowLevel = UIWindow.Level.alert + 1  // Normal overlay level (only visible in SafeGuardChild app)
         overlayWindow?.backgroundColor = .clear
 
         // Create the countdown view controller
@@ -66,10 +66,7 @@ class CountdownOverlayManager: ObservableObject {
         logger.info("Countdown window created - frame: \(String(describing: self.overlayWindow?.frame)), level: \(self.overlayWindow?.windowLevel.rawValue ?? 0)")
 
         isActive = true
-        logger.info("Countdown overlay setup complete")
-
-        // Maintain overlay visibility like blocking overlay does
-        scheduleOverlayMaintenance()
+        logger.info("Countdown overlay setup complete - visible only in SafeGuardChild app")
     }
 
     func hideCountdown() {
@@ -81,24 +78,6 @@ class CountdownOverlayManager: ObservableObject {
         overlayWindow = nil
         countdownVC = nil
         isActive = false
-    }
-
-    private func scheduleOverlayMaintenance() {
-        // Reshow overlay every 2 seconds to ensure it stays visible
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            self.maintainOverlay()
-        }
-    }
-
-    private func maintainOverlay() {
-        guard isActive else { return }
-
-        // Ensure overlay stays visible
-        overlayWindow?.makeKeyAndVisible()
-        overlayWindow?.windowLevel = UIWindow.Level.alert + 1000
-
-        logger.debug("Maintaining countdown overlay")
-        scheduleOverlayMaintenance()
     }
 }
 
@@ -134,35 +113,36 @@ class CountdownViewController: UIViewController {
 
     private func setupCountdownInterface() {
         logger.debug("Setting up countdown interface")
-        view.backgroundColor = .clear
+        view.backgroundColor = UIColor.black.withAlphaComponent(0.3)
 
-        // Container with rounded corners in top-right
+        // Container with rounded corners - centered
         containerView = UIView()
         containerView.backgroundColor = UIColor.systemOrange.withAlphaComponent(0.95)
-        containerView.layer.cornerRadius = 12
+        containerView.layer.cornerRadius = 20
         containerView.layer.shadowColor = UIColor.black.cgColor
-        containerView.layer.shadowOpacity = 0.3
-        containerView.layer.shadowOffset = CGSize(width: 0, height: 2)
-        containerView.layer.shadowRadius = 4
+        containerView.layer.shadowOpacity = 0.4
+        containerView.layer.shadowOffset = CGSize(width: 0, height: 4)
+        containerView.layer.shadowRadius = 8
         containerView.translatesAutoresizingMaskIntoConstraints = false
 
         // Timer icon
         let iconLabel = UILabel()
         iconLabel.text = "⏰"
-        iconLabel.font = .systemFont(ofSize: 24)
+        iconLabel.font = .systemFont(ofSize: 60)
+        iconLabel.textAlignment = .center
         iconLabel.translatesAutoresizingMaskIntoConstraints = false
 
         // Timer text
         timerLabel = UILabel()
-        timerLabel.font = .monospacedDigitSystemFont(ofSize: 20, weight: .bold)
+        timerLabel.font = .monospacedDigitSystemFont(ofSize: 64, weight: .bold)
         timerLabel.textColor = .white
         timerLabel.textAlignment = .center
         timerLabel.translatesAutoresizingMaskIntoConstraints = false
 
         // Message label
         messageLabel = UILabel()
-        messageLabel.text = customMessage ?? "Time left"
-        messageLabel.font = .systemFont(ofSize: 12, weight: .medium)
+        messageLabel.text = customMessage ?? "Until shutdown"
+        messageLabel.font = .systemFont(ofSize: 20, weight: .medium)
         messageLabel.textColor = .white
         messageLabel.textAlignment = .center
         messageLabel.numberOfLines = 2
@@ -174,26 +154,26 @@ class CountdownViewController: UIViewController {
         view.addSubview(containerView)
 
         NSLayoutConstraint.activate([
-            // Position in top-right corner
-            containerView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
-            containerView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -8),
-            containerView.widthAnchor.constraint(equalToConstant: 140),
-            containerView.heightAnchor.constraint(greaterThanOrEqualToConstant: 80),
+            // Center the container
+            containerView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            containerView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            containerView.widthAnchor.constraint(equalToConstant: 280),
+            containerView.heightAnchor.constraint(equalToConstant: 280),
 
-            iconLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 8),
-            iconLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 8),
+            iconLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 30),
+            iconLabel.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
 
-            timerLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 8),
-            timerLabel.leadingAnchor.constraint(equalTo: iconLabel.trailingAnchor, constant: 4),
-            timerLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -8),
+            timerLabel.topAnchor.constraint(equalTo: iconLabel.bottomAnchor, constant: 20),
+            timerLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
+            timerLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
 
-            messageLabel.topAnchor.constraint(equalTo: timerLabel.bottomAnchor, constant: 4),
-            messageLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 8),
-            messageLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -8),
-            messageLabel.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -8)
+            messageLabel.topAnchor.constraint(equalTo: timerLabel.bottomAnchor, constant: 16),
+            messageLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
+            messageLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
+            messageLabel.bottomAnchor.constraint(lessThanOrEqualTo: containerView.bottomAnchor, constant: -30)
         ])
 
-        // Make view non-interactive so touches pass through
+        // Make view non-interactive so touches pass through to app below
         view.isUserInteractionEnabled = false
 
         logger.debug("Countdown interface setup complete, container frame: \(String(describing: self.containerView.frame))")

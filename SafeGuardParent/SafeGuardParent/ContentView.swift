@@ -11,6 +11,7 @@ struct ContentView: View {
     @EnvironmentObject var parentControls: ParentControlManager
     @State private var showingAlert = false
     @State private var alertMessage = ""
+    @State private var selectedMinutes = 5
 
     // Computed property that syncs with actual restriction status
     private var restrictionsEnabled: Bool {
@@ -111,24 +112,46 @@ struct ContentView: View {
                     .background(Color(.systemGray6))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
 
-                    // Warning Button
-                    Button {
-                        Task {
-                            await sendWarning()
-                        }
-                    } label: {
+                    // Scheduled Shutdown Section
+                    VStack(spacing: 12) {
                         HStack {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                            Text("Send 5 Minute Warning")
-                                .fontWeight(.semibold)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Scheduled Shutdown")
+                                    .font(.headline)
+                                Text("Shut down in:")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            Picker("", selection: $selectedMinutes) {
+                                ForEach([1, 2, 3, 5, 10, 15, 20, 30, 45, 60], id: \.self) { minutes in
+                                    Text("\(minutes) min").tag(minutes)
+                                }
+                            }
+                            .pickerStyle(.menu)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.orange)
-                        .foregroundColor(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                        Button {
+                            Task {
+                                await sendScheduledShutdown()
+                            }
+                        } label: {
+                            HStack {
+                                Image(systemName: "clock.fill")
+                                Text("Shut Down in \(selectedMinutes) Minutes")
+                                    .fontWeight(.semibold)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.orange)
+                            .foregroundColor(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .disabled(parentControls.firebase.isProcessingCommand)
                     }
-                    .disabled(parentControls.firebase.isProcessingCommand)
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .padding(.horizontal, 24)
             } else {
@@ -166,9 +189,9 @@ struct ContentView: View {
         }
     }
 
-    private func sendWarning() async {
-        let success = await parentControls.sendWarningCommand(minutes: 5)
-        alertMessage = success ? "5-minute warning sent successfully" : "Failed to send warning. Please try again."
+    private func sendScheduledShutdown() async {
+        let success = await parentControls.sendWarningCommand(minutes: selectedMinutes)
+        alertMessage = success ? "Scheduled shutdown in \(selectedMinutes) minutes" : "Failed to schedule shutdown. Please try again."
         showingAlert = true
     }
 
